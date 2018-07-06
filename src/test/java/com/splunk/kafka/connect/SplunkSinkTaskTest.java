@@ -23,6 +23,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.apache.kafka.connect.sink.SinkTask;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -64,8 +65,18 @@ public class SplunkSinkTaskTest {
 
     @Test
     public void putWithEventAndAck() {
-        putWithSuccess(false, true);
-        putWithSuccess(false, false);
+      Map<String, String> extraConf = new HashMap<>();
+      extraConf.put(SplunkSinkConnectorConfig.INDEXES_CONF, "i1");
+      extraConf.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "s1");
+      extraConf.put(SplunkSinkConnectorConfig.SOURCES_CONF, "e1");
+      putWithSuccess(true, true, extraConf);
+  
+      Map<String, String> conf = new HashMap<>();
+      conf.put(SplunkSinkConnectorConfig.INDEXES_CONF, "");
+      conf.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "");
+      conf.put(SplunkSinkConnectorConfig.SOURCES_CONF, "");
+      putWithSuccess(true, false, conf);
+  
     }
 
     @Test
@@ -218,15 +229,38 @@ public class SplunkSinkTaskTest {
 
     @Test
     public void putWithRawAndAck() {
-        putWithSuccess(true, true);
+        Map<String, String> extraConf = new HashMap<>();
+        extraConf.put(SplunkSinkConnectorConfig.INDEXES_CONF, "i1");
+        extraConf.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "s1");
+        extraConf.put(SplunkSinkConnectorConfig.SOURCES_CONF, "e1");
+        putWithSuccess(true, true, extraConf);
+
+        
     }
+    
+    @Test
+    public void putWithRawAndAckAndNewMeta() {
+        Map<String, String> extraConf = new HashMap<>();
+        extraConf.put(SinkTask.TOPICS_CONFIG, "mytopic");
+        extraConf.put(SinkTask.TOPICS_CONFIG+".mytopic."+ SplunkSinkConnectorConfig.INDEX_CONF, "i1");
+        extraConf.put(SinkTask.TOPICS_CONFIG+".mytopic."+ SplunkSinkConnectorConfig.SOURCETYPE_CONF, "s1");
+        extraConf.put(SinkTask.TOPICS_CONFIG+".mytopic."+ SplunkSinkConnectorConfig.SOURCE_CONF, "e1");
+        putWithSuccess(true, true, extraConf);
+        
+        
+    }
+    
 
     @Test
     public void putWithRawAndAckWithoutMeta() {
-        putWithSuccess(true, false);
+      Map<String, String> conf = new HashMap<>();
+      conf.put(SplunkSinkConnectorConfig.INDEXES_CONF, "");
+      conf.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "");
+      conf.put(SplunkSinkConnectorConfig.SOURCES_CONF, "");
+      putWithSuccess(true, false, conf);
     }
 
-    private void putWithSuccess(boolean raw, boolean withMeta) {
+    private void putWithSuccess(boolean raw, boolean withMeta, Map<String, String> conf) {
         int batchSize = 100;
         int total = 1000;
 
@@ -235,15 +269,8 @@ public class SplunkSinkTaskTest {
         config.put(SplunkSinkConnectorConfig.RAW_CONF, String.valueOf(raw));
         config.put(SplunkSinkConnectorConfig.ACK_CONF, String.valueOf(true));
         config.put(SplunkSinkConnectorConfig.MAX_BATCH_SIZE_CONF, String.valueOf(batchSize));
-        if (withMeta) {
-            config.put(SplunkSinkConnectorConfig.INDEX_CONF, "i1");
-            config.put(SplunkSinkConnectorConfig.SOURCETYPE_CONF, "s1");
-            config.put(SplunkSinkConnectorConfig.SOURCE_CONF, "e1");
-        } else {
-            config.put(SplunkSinkConnectorConfig.INDEX_CONF, "");
-            config.put(SplunkSinkConnectorConfig.SOURCETYPE_CONF, "");
-            config.put(SplunkSinkConnectorConfig.SOURCE_CONF, "");
-        }
+        config.putAll(conf);
+        
 
         SplunkSinkTask task = new SplunkSinkTask();
         HecMock hec = new HecMock(task);

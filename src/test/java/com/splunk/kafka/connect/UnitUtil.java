@@ -35,9 +35,9 @@ public class UnitUtil {
         config.put(SplunkSinkConnectorConfig.URI_CONF, configProfile.getUri());
         config.put(SplunkSinkConnectorConfig.RAW_CONF, String.valueOf(configProfile.isRaw()));
         config.put(SplunkSinkConnectorConfig.ACK_CONF , String.valueOf(configProfile.isAck()));
-        config.put(SplunkSinkConnectorConfig.INDEX_CONF, configProfile.getIndexes());
-        config.put(SplunkSinkConnectorConfig.SOURCETYPE_CONF, configProfile.getSourcetypes());
-        config.put(SplunkSinkConnectorConfig.SOURCE_CONF, configProfile.getSources());
+        config.put(SplunkSinkConnectorConfig.INDEXES_CONF, configProfile.getIndexes());
+        config.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, configProfile.getSourcetypes());
+        config.put(SplunkSinkConnectorConfig.SOURCES_CONF, configProfile.getSources());
         config.put(SplunkSinkConnectorConfig.HTTP_KEEPALIVE_CONF, String.valueOf(configProfile.isHttpKeepAlive()));
         config.put(SplunkSinkConnectorConfig.SSL_VALIDATE_CERTIFICATES_CONF, String.valueOf(configProfile.isValidateCertificates()));
 

@@ -144,9 +144,9 @@ public class SplunkSinkConnectorConfigTest {
         UnitUtil uu = new UnitUtil(0);
         Map<String, String> config = uu.createTaskConfig();
         config.put(SinkConnector.TOPICS_CONFIG, "t1,t2,t3");
-        config.put(SplunkSinkConnectorConfig.INDEX_CONF, "i1,i2,i3");
-        config.put(SplunkSinkConnectorConfig.SOURCE_CONF, "s1,s2,s3");
-        config.put(SplunkSinkConnectorConfig.SOURCETYPE_CONF, "e1,e2,e3");
+        config.put(SplunkSinkConnectorConfig.INDEXES_CONF, "i1,i2,i3");
+        config.put(SplunkSinkConnectorConfig.SOURCES_CONF, "s1,s2,s3");
+        config.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "e1,e2,e3");
         SplunkSinkConnectorConfig connectorConfig = new SplunkSinkConnectorConfig(config);
 
         Map<String, Map<String, String>> topicMetas = new HashMap<>();
@@ -169,9 +169,9 @@ public class SplunkSinkConnectorConfigTest {
         // one index, multiple source, source types
         Map<String, String> config = uu.createTaskConfig();
         config.put(SinkConnector.TOPICS_CONFIG, "t1,t2,t3");
-        config.put(SplunkSinkConnectorConfig.INDEX_CONF, "i1");
-        config.put(SplunkSinkConnectorConfig.SOURCE_CONF, "s1,s2,s3");
-        config.put(SplunkSinkConnectorConfig.SOURCETYPE_CONF, "e1,e2,e3");
+        config.put(SplunkSinkConnectorConfig.INDEXES_CONF, "i1");
+        config.put(SplunkSinkConnectorConfig.SOURCES_CONF, "s1,s2,s3");
+        config.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "e1,e2,e3");
         SplunkSinkConnectorConfig connectorConfig = new SplunkSinkConnectorConfig(config);
 
         Map<String, Map<String, String>> topicMetas = new HashMap<>();
@@ -194,24 +194,24 @@ public class SplunkSinkConnectorConfigTest {
         // index, source, sourcetypes
         Map<String, String> config = uu.createTaskConfig();
         config.put(SinkConnector.TOPICS_CONFIG, "t1");
-        config.put(SplunkSinkConnectorConfig.INDEX_CONF, "i1");
-        config.put(SplunkSinkConnectorConfig.SOURCE_CONF, "s1");
-        config.put(SplunkSinkConnectorConfig.SOURCETYPE_CONF, "e1");
+        config.put(SplunkSinkConnectorConfig.INDEXES_CONF, "i1");
+        config.put(SplunkSinkConnectorConfig.SOURCES_CONF, "s1");
+        config.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "e1");
         SplunkSinkConnectorConfig connectorConfig = new SplunkSinkConnectorConfig(config);
         Assert.assertTrue(connectorConfig.hasMetaDataConfigured());
 
         // source, sourcetype
         config = uu.createTaskConfig();
         config.put(SinkConnector.TOPICS_CONFIG, "t1");
-        config.put(SplunkSinkConnectorConfig.SOURCE_CONF, "s1");
-        config.put(SplunkSinkConnectorConfig.SOURCETYPE_CONF, "e1");
+        config.put(SplunkSinkConnectorConfig.SOURCES_CONF, "s1");
+        config.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "e1");
         connectorConfig = new SplunkSinkConnectorConfig(config);
         Assert.assertTrue(connectorConfig.hasMetaDataConfigured());
 
         // sourcetype
         config = uu.createTaskConfig();
         config.put(SinkConnector.TOPICS_CONFIG, "t1");
-        config.put(SplunkSinkConnectorConfig.SOURCETYPE_CONF, "e1");
+        config.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "e1");
         connectorConfig = new SplunkSinkConnectorConfig(config);
         Assert.assertTrue(connectorConfig.hasMetaDataConfigured());
     }
@@ -223,9 +223,9 @@ public class SplunkSinkConnectorConfigTest {
         // one index, multiple source, sourcetypes
         Map<String, String> config = uu.createTaskConfig();
         config.put(SinkConnector.TOPICS_CONFIG, "t1,t2,t3");
-        config.put(SplunkSinkConnectorConfig.INDEX_CONF, "i1,i2");
-        config.put(SplunkSinkConnectorConfig.SOURCE_CONF, "s1,s2,s3");
-        config.put(SplunkSinkConnectorConfig.SOURCETYPE_CONF, "e1,e2,e3");
+        config.put(SplunkSinkConnectorConfig.INDEXES_CONF, "i1,i2");
+        config.put(SplunkSinkConnectorConfig.SOURCES_CONF, "s1,s2,s3");
+        config.put(SplunkSinkConnectorConfig.SOURCETYPES_CONF, "e1,e2,e3");
         SplunkSinkConnectorConfig connectorConfig = new SplunkSinkConnectorConfig(config);
     }
 

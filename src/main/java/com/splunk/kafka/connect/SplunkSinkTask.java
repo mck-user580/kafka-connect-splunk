@@ -17,12 +17,17 @@ package com.splunk.kafka.connect;
 
 import com.splunk.hecclient.*;
 import com.splunk.kafka.connect.VersionUtils;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.RetriableException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import org.slf4j.Logger;
@@ -139,17 +144,13 @@ public final class SplunkSinkTask extends SinkTask implements PollerCallback {
     }
 
     private void handleRaw(final Collection<SinkRecord> records) {
-        if (connectorConfig.hasMetaDataConfigured()) {
-            // when setup metadata - index, source, sourcetype, we need partition records for /raw
-            Map<TopicPartition, Collection<SinkRecord>> partitionedRecords = partitionRecords(records);
-            for (Map.Entry<TopicPartition, Collection<SinkRecord>> entry: partitionedRecords.entrySet()) {
-                EventBatch batch = createRawEventBatch(entry.getKey());
-                sendEvents(entry.getValue(), batch);
-            }
-        } else {
-            EventBatch batch = createRawEventBatch(null);
-            sendEvents(records, batch);
-        }
+  
+      Map<EventBatch, Collection<SinkRecord>> partitionedRecords = partitionRecords(records);
+      // partition records based on calculated index, source, sourcetype, host      
+      for (Map.Entry<EventBatch, Collection<SinkRecord>> entry : partitionedRecords.entrySet()) {
+        sendEvents(entry.getValue(), entry.getKey());
+      }
+  
     }
 
     private void handleEvent(final Collection<SinkRecord> records) {
@@ -192,24 +193,6 @@ public final class SplunkSinkTask extends SinkTask implements PollerCallback {
             onEventFailure(Arrays.asList(batch), ex);
             log.error("failed to send batch", ex);
         }
-    }
-
-    // setup metadata on RawEventBatch
-    private EventBatch createRawEventBatch(final TopicPartition tp) {
-        if (tp == null) {
-            return RawEventBatch.factory().build();
-        }
-
-        Map<String, String> metas = connectorConfig.topicMetas.get(tp.topic());
-        if (metas == null || metas.isEmpty()) {
-            return RawEventBatch.factory().build();
-        }
-
-        return RawEventBatch.factory()
-                .setIndex(metas.get(SplunkSinkConnectorConfig.INDEX))
-                .setSourcetype(metas.get(SplunkSinkConnectorConfig.SOURCETYPE))
-                .setSource(metas.get(SplunkSinkConnectorConfig.SOURCE))
-                .build();
     }
 
     @Override
@@ -260,13 +243,36 @@ public final class SplunkSinkTask extends SinkTask implements PollerCallback {
             event.setTime(record.timestamp() / 1000.0);
         }
 
+        
         Map<String, String> metas = connectorConfig.topicMetas.get(record.topic());
         if (metas != null) {
             event.setIndex(metas.get(SplunkSinkConnectorConfig.INDEX));
             event.setSourcetype(metas.get(SplunkSinkConnectorConfig.SOURCETYPE));
             event.setSource(metas.get(SplunkSinkConnectorConfig.SOURCE));
+            event.setHost(metas.get(SplunkSinkConnectorConfig.HOST));
             event.addFields(connectorConfig.enrichments);
         }
+        
+        //overwrite with values from headers 
+        if (record.headers().lastWithName(SplunkSinkConnectorConfig.INDEX_HDR) != null) {
+          event.setIndex(record.headers().lastWithName(SplunkSinkConnectorConfig.INDEX_HDR).value().toString());
+        }
+        if (record.headers().lastWithName(SplunkSinkConnectorConfig.SOURCETYPE_HDR) != null) {
+          event.setSourcetype(record.headers().lastWithName(SplunkSinkConnectorConfig.SOURCETYPE_HDR).value().toString());
+        }
+        if (record.headers().lastWithName(SplunkSinkConnectorConfig.SOURCE_HDR) != null) {
+          event.setSource(record.headers().lastWithName(SplunkSinkConnectorConfig.SOURCE_HDR).value().toString());
+        }
+        if (record.headers().lastWithName(SplunkSinkConnectorConfig.HOST_HDR) != null) {
+          event.setHost(record.headers().lastWithName(SplunkSinkConnectorConfig.HOST_HDR).value().toString());
+        }
+        if (record.headers().lastWithName(SplunkSinkConnectorConfig.TIME_HDR) != null) {
+          long time = Long.valueOf(record.headers().lastWithName(SplunkSinkConnectorConfig.TIME_HDR).value().toString());
+          event.setTime(time/1000);
+          
+        }
+        
+        
 
         if (connectorConfig.trackData) {
             // for data loss, latency tracking
@@ -304,19 +310,73 @@ public final class SplunkSinkTask extends SinkTask implements PollerCallback {
     }
 
     // partition records according to topic-partition key
-    private Map<TopicPartition, Collection<SinkRecord>> partitionRecords(Collection<SinkRecord> records) {
-        Map<TopicPartition, Collection<SinkRecord>> partitionedRecords = new HashMap<>();
-
-        for (SinkRecord record: records) {
-            TopicPartition key = new TopicPartition(record.topic(), record.kafkaPartition());
-            Collection<SinkRecord> partitioned = partitionedRecords.get(key);
-            if (partitioned == null) {
-                partitioned = new ArrayList<>();
-                partitionedRecords.put(key, partitioned);
-            }
-            partitioned.add(record);
+    private Map<EventBatch, Collection<SinkRecord>> partitionRecords(Collection<SinkRecord> records) {
+      Map<EventBatch, Collection<SinkRecord>> partitionedRecords = new HashMap<>();
+  
+      for (SinkRecord record : records) {
+        EventBatch batch = getBatchForRecord(record);
+        Collection<SinkRecord> partitioned = partitionedRecords.get(batch);
+        if (partitioned == null) {
+          partitioned = new ArrayList<>();
+          partitionedRecords.put(batch, partitioned);
         }
-        return partitionedRecords;
+        partitioned.add(record);
+      }
+      return partitionedRecords;
+    }
+
+    private EventBatch getBatchForRecord(SinkRecord record) {
+      //get metadata in the order: 
+      // 1. defaults (splunk.index, splunk.sourcetype, splunk.source etc )
+      // 2. configured topic metas
+      // 3. from record headers
+      
+      String index = connectorConfig.index;
+      String sourcetype= connectorConfig.sourcetype;
+      String source= connectorConfig.source;
+      String host= connectorConfig.host;
+      
+      
+      if (StringUtils.isNotBlank(connectorConfig.topicMetas.getOrDefault(record.topic(), Collections.emptyMap()).getOrDefault(SplunkSinkConnectorConfig.INDEX, null))) {
+        index = connectorConfig.topicMetas.getOrDefault(record.topic(), Collections.emptyMap()).getOrDefault(SplunkSinkConnectorConfig.INDEX, null);
+      }
+      if (StringUtils.isNotBlank(connectorConfig.topicMetas.getOrDefault(record.topic(), Collections.emptyMap()).getOrDefault(SplunkSinkConnectorConfig.SOURCETYPE, null))) {
+        sourcetype = connectorConfig.topicMetas.getOrDefault(record.topic(), Collections.emptyMap()).getOrDefault(SplunkSinkConnectorConfig.SOURCETYPE, null);
+      }
+
+      if (StringUtils.isNotBlank(connectorConfig.topicMetas.getOrDefault(record.topic(), Collections.emptyMap()).getOrDefault(SplunkSinkConnectorConfig.SOURCE, null))) {
+        source = connectorConfig.topicMetas.getOrDefault(record.topic(), Collections.emptyMap()).getOrDefault(SplunkSinkConnectorConfig.SOURCE, null);
+      }
+      if (StringUtils.isNotBlank(connectorConfig.topicMetas.getOrDefault(record.topic(), Collections.emptyMap()).getOrDefault(SplunkSinkConnectorConfig.HOST, null))) {
+        host = connectorConfig.topicMetas.getOrDefault(record.topic(), Collections.emptyMap()).getOrDefault(SplunkSinkConnectorConfig.HOST, null);
+      }
+      
+      if (record.headers().lastWithName(SplunkSinkConnectorConfig.INDEX_HDR) != null) {
+        index = record.headers().lastWithName(SplunkSinkConnectorConfig.INDEX_HDR).value().toString();
+      }
+      if (record.headers().lastWithName(SplunkSinkConnectorConfig.SOURCETYPE_HDR) != null) {
+        sourcetype = record.headers().lastWithName(SplunkSinkConnectorConfig.SOURCETYPE_HDR).value().toString();
+      }
+      if (record.headers().lastWithName(SplunkSinkConnectorConfig.SOURCE_HDR) != null) {
+        source = record.headers().lastWithName(SplunkSinkConnectorConfig.SOURCE_HDR).value().toString();
+      }
+      if (record.headers().lastWithName(SplunkSinkConnectorConfig.HOST_HDR) != null) {
+        host = record.headers().lastWithName(SplunkSinkConnectorConfig.HOST_HDR).value().toString();
+      }
+      
+      long time = -1;
+      if (record.headers().lastWithName(SplunkSinkConnectorConfig.TIME_HDR) != null) {
+        time = Long.valueOf(record.headers().lastWithName(SplunkSinkConnectorConfig.TIME_HDR).value().toString());        
+      }
+        
+        
+      return RawEventBatch.factory()
+       .setHost(host)
+       .setIndex(index)
+       .setSource(source)
+       .setSourcetype(sourcetype)
+       .setTime(time)
+       .build();
     }
 
     private HecInf createHec() {

@@ -15,18 +15,19 @@
  */
 package com.splunk.kafka.connect;
 
-import com.splunk.hecclient.Hec;
-import com.splunk.hecclient.HecConfig;
-import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.connect.sink.SinkConnector;
-
-import org.junit.Assert;
-import org.junit.Test;
-
-import javax.net.ssl.SSLContext;
 import java.security.KeyStoreException;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.net.ssl.SSLContext;
+
+import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.connect.sink.SinkConnector;
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.splunk.hecclient.Hec;
+import com.splunk.hecclient.HecConfig;
 
 public class SplunkSinkConnectorConfigTest {
 
@@ -113,6 +114,35 @@ public class SplunkSinkConnectorConfigTest {
     }
 
 
+    
+    @Test
+    public void testRawLineBreaker() {
+        UnitUtil uu = new UnitUtil(0);
+        Map<String, String> config = uu.createTaskConfig();
+        SplunkSinkConnectorConfig connectorConfig = new SplunkSinkConnectorConfig(config);
+        Assert.assertNotNull(connectorConfig.lineBreaker);
+        Assert.assertEquals("\n", connectorConfig.lineBreaker);
+        
+        config.put(SplunkSinkConnectorConfig.LINE_BREAKER_CONF, "XXX");
+        connectorConfig = new SplunkSinkConnectorConfig(config);
+        Assert.assertNotNull(connectorConfig.lineBreaker);
+        Assert.assertEquals("XXX", connectorConfig.lineBreaker);
+        
+        config.put(SplunkSinkConnectorConfig.LINE_BREAKER_CONF, "\\t");
+        connectorConfig = new SplunkSinkConnectorConfig(config);
+        Assert.assertNotNull(connectorConfig.lineBreaker);
+        Assert.assertEquals("\t", connectorConfig.lineBreaker);
+        
+        config.put(SplunkSinkConnectorConfig.LINE_BREAKER_CONF, "");
+        connectorConfig = new SplunkSinkConnectorConfig(config);
+        Assert.assertNotNull(connectorConfig.lineBreaker);
+        Assert.assertEquals("", connectorConfig.lineBreaker);
+        
+        
+    }
+
+    
+    
     @Test
     public void createWithoutEnrichment() {
         UnitUtil uu = new UnitUtil(0);

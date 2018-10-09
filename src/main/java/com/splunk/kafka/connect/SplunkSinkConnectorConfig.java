@@ -21,6 +21,7 @@ import org.apache.kafka.connect.sink.SinkConnector;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -145,8 +146,8 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
   // /raw endpoint only
   static final String LINE_BREAKER_DOC = "Only applicable to /raw HEC endpoint. The setting is used to specify a custom "
       + "line breaker to help Splunk separate the events correctly. Note: For example"
-      + "you can specify \"#####\" as a special line breaker.By default, this setting is "
-      + "empty.";
+      + "you can specify \"#####\" as a special line breaker.By default, this setting is \\n ";
+    
   // /event endpoint only
   static final String USE_RECORD_TIMESTAMP_DOC = "Valid settings are true or false. When set to `true`, The timestamp "
       + "is retrieved from the Kafka record and passed to Splunk as a HEC meta-data "
@@ -234,7 +235,7 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
     useRecordTimestamp = getBoolean(USE_RECORD_TIMESTAMP_CONF);
     maxBatchSize = getInt(MAX_BATCH_SIZE_CONF);
     numberOfThreads = getInt(HEC_THREDS_CONF);
-    lineBreaker = getString(LINE_BREAKER_CONF);
+    lineBreaker = StringEscapeUtils.unescapeJava(getString(LINE_BREAKER_CONF));   
     maxOutstandingEvents = getInt(MAX_OUTSTANDING_EVENTS_CONF);
     maxRetries = getInt(MAX_RETRIES_CONF);
     topicMetas = initMetaMap(taskConfig);
@@ -269,7 +270,7 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
         .define(TRACK_DATA_CONF, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW, TRACK_DATA_DOC)
         .define(USE_RECORD_TIMESTAMP_CONF, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.MEDIUM, USE_RECORD_TIMESTAMP_DOC)
         .define(HEC_THREDS_CONF, ConfigDef.Type.INT, 1, ConfigDef.Importance.LOW, HEC_THREADS_DOC)
-        .define(LINE_BREAKER_CONF, ConfigDef.Type.STRING, "", ConfigDef.Importance.MEDIUM, LINE_BREAKER_DOC)
+        .define(LINE_BREAKER_CONF, ConfigDef.Type.STRING, "\\n", ConfigDef.Importance.MEDIUM, LINE_BREAKER_DOC)
         .define(MAX_OUTSTANDING_EVENTS_CONF, ConfigDef.Type.INT, 1000000, ConfigDef.Importance.MEDIUM, MAX_OUTSTANDING_EVENTS_DOC)
         .define(MAX_RETRIES_CONF, ConfigDef.Type.INT, -1, ConfigDef.Importance.MEDIUM, MAX_RETRIES_DOC)
         .define(MAX_BATCH_SIZE_CONF, ConfigDef.Type.INT, 500, ConfigDef.Importance.MEDIUM, MAX_BATCH_SIZE_DOC);

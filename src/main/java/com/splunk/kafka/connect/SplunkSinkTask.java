@@ -160,16 +160,21 @@ public final class SplunkSinkTask extends SinkTask implements PollerCallback {
 
     private void sendEvents(final Collection<SinkRecord> records, EventBatch batch) {
         for (final SinkRecord record: records) {
-            Event event;
+            Event event = null;
             try {
                 event = createHecEventFrom(record);
-            } catch (HecException ex) {
-                log.error("ignore malformed event for topicPartitionOffset=({}, {}, {})",
+            }catch (HecEmptyEventException | HecNullEventException ex) {
+             //ignore empty events  
+            }catch (HecException ex) {
+              
+                log.trace("ignore malformed event for topicPartitionOffset=({}, {}, {})",
                         record.topic(), record.kafkaPartition(), record.kafkaOffset(), ex);
                 event = createHecEventFromMalformed(record);
             }
-
-            batch.add(event);
+            
+            if (event != null) {
+              batch.add(event);  
+            }
             if (batch.size() >= connectorConfig.maxBatchSize) {
                 send(batch);
                 // start a new batch after send

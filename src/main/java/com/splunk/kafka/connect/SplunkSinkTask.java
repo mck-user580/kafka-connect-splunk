@@ -273,8 +273,7 @@ public final class SplunkSinkTask extends SinkTask implements PollerCallback {
         }
         if (record.headers().lastWithName(SplunkSinkConnectorConfig.TIME_HDR) != null) {
           long time = Long.valueOf(record.headers().lastWithName(SplunkSinkConnectorConfig.TIME_HDR).value().toString());
-          event.setTime(time/1000);
-          
+          event.setTime((double)time/1000);
         }
         
         

@@ -28,4 +28,6 @@ splunk-kafka-connect/
 pom.xml.versionsBackup
 .classpath
 .project
-/target/
+target/
+.settings/
+.checkstyle

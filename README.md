@@ -43,7 +43,7 @@ topics.topic2.splunk.source=mysource2
  ```
  3. From message headers
  
-\nsupported headers:
+supported headers:
 * splunk.index
 * splunk.sourcetype
 * splunk.source

@@ -26,7 +26,7 @@ Splunk metadata can be defined  on 3 ways:
     splunk.sourcetype=mysourcetype
     splunk.source=mysource    
     ```
-2.  For topic 
+2.  From topic 
   
  ```
 # will also work for topics.regex=topic.*
@@ -41,10 +41,11 @@ topics.topic2.splunk.index=myindex2
 topics.topic2.splunk.sourcetype=mysourcetype2
 topics.topic2.splunk.source=mysource2
  ```
- 3. from headers
-supported headers:
+ 3. From message headers
+ 
+\nsupported headers:
 * splunk.index
 * splunk.sourcetype
 * splunk.source
 * splunk.host
-* timestamp (epoch time in millis)
+* splunk.time (epoch time in millis)

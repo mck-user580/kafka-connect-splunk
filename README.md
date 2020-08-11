@@ -6,7 +6,7 @@ Clone of the original Splunk Connector with some additional improvements
 
 ## Changes
 1. Override metadata from headers. 
-2. "Inherit" configuration supported
+2. Different levels to define metadata: global, topic, message 
 3. Minor improvements
 
 

@@ -15,9 +15,14 @@
  */
 package com.splunk.kafka.connect;
 
-import com.splunk.hecclient.Event;
-import com.splunk.hecclient.EventBatch;
-import com.splunk.hecclient.RawEventBatch;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.record.TimestampType;
@@ -27,7 +32,10 @@ import org.apache.kafka.connect.sink.SinkTask;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.*;
+import com.splunk.hecclient.Event;
+import com.splunk.hecclient.EventBatch;
+import com.splunk.hecclient.JsonEventBatch;
+import com.splunk.hecclient.RawEventBatch;
 
 public class SplunkSinkTaskTest {
     @Test
@@ -222,7 +230,7 @@ public class SplunkSinkTaskTest {
         task.setHec(hec);
         task.start(config);
         task.put(createSinkRecords(10, ""));
-        Assert.assertEquals(2, hec.getBatches().size());
+        Assert.assertEquals(0, hec.getBatches().size());//empty events are ignored see SplunkSinkTask.sendEvents(final Collection<SinkRecord> records, EventBatch batch) {
 
         task.stop();
     }
@@ -259,6 +267,45 @@ public class SplunkSinkTaskTest {
       conf.put(SplunkSinkConnectorConfig.SOURCES_CONF, "");
       putWithSuccess(true, false, conf);
     }
+    
+    
+    
+    
+    @Test
+    public void putWithFieldsFromHeader() throws IOException {
+      UnitUtil uu = new UnitUtil(0);
+      Map<String, String> config = uu.createTaskConfig();
+      config.remove(SplunkSinkConnectorConfig.ENRICHMENT_CONF);
+      config.put(SplunkSinkConnectorConfig.RAW_CONF, String.valueOf(false));
+      config.put(SplunkSinkConnectorConfig.TRACK_DATA_CONF, String.valueOf(false));
+      config.put(SplunkSinkConnectorConfig.MAX_BATCH_SIZE_CONF, String.valueOf(10));
+
+      SplunkSinkTask task = new SplunkSinkTask();
+      HecMock hec = new HecMock(task);
+      hec.setSendReturnResult(HecMock.success);
+      task.setHec(hec);
+      task.start(config);
+
+      Collection<SinkRecord> records = createSinkRecords(10);
+      for (SinkRecord sr : records) {
+        sr.headers().addString(SplunkSinkConnectorConfig.FIELDS_HDR_PREFIX + "testField", "testValue");
+        sr.headers().addString(SplunkSinkConnectorConfig.INDEX_HDR,  "kafka");
+        sr.headers().addString(SplunkSinkConnectorConfig.SOURCETYPE_HDR,  "testsyslog");
+      }
+
+      task.put(records);
+      Assert.assertFalse(hec.getBatches().isEmpty());
+
+      for (EventBatch batch : hec.getBatches()) {
+        JsonEventBatch jb = (JsonEventBatch) batch;
+        Assert.assertTrue(jb.getEvents().get(0).getFields().containsKey("testField"));
+      }
+
+      task.stop();
+    }
+    
+    
+    
 
     private void putWithSuccess(boolean raw, boolean withMeta, Map<String, String> conf) {
         int batchSize = 100;
@@ -313,6 +360,13 @@ public class SplunkSinkTaskTest {
         Assert.assertTrue(task.getTracker().getAndRemoveFailedRecords().isEmpty());
         task.stop();
     }
+    
+    
+    
+    
+    
+    
+    
 
     private Collection<SinkRecord> createSinkRecords(int numOfRecords) {
         return createSinkRecords(numOfRecords, 0,"ni, hao");

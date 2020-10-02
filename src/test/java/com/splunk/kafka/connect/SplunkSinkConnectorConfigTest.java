@@ -276,9 +276,9 @@ public class SplunkSinkConnectorConfigTest {
     private void assertMeta(final SplunkSinkConnectorConfig connectorConfig) {
         UnitUtil uu = new UnitUtil(0);
 
-        Assert.assertEquals(uu.configProfile.getIndexes(), connectorConfig.indexes);
-        Assert.assertEquals(uu.configProfile.getSourcetypes(), connectorConfig.sourcetypes);
-        Assert.assertEquals(uu.configProfile.getSources(), connectorConfig.sources);
+        Assert.assertEquals(uu.configProfile.getIndexes(), connectorConfig.indexes.size() == 0 ? "" : connectorConfig.indexes.toString());
+        Assert.assertEquals(uu.configProfile.getSourcetypes(), connectorConfig.sourcetypes.size() == 0 ? "" : connectorConfig.sourcetypes.toString());
+        Assert.assertEquals(uu.configProfile.getSources(), connectorConfig.sources.size() == 0 ? "" : connectorConfig.sources.toString());
     }
 
     private void commonAssert(final SplunkSinkConnectorConfig connectorConfig) {

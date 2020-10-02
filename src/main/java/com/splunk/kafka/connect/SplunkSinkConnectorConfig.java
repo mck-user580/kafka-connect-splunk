@@ -39,6 +39,7 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
   static final String SOURCETYPE_HDR = "splunk.sourcetype";
   static final String HOST_HDR = "splunk.host";
   static final String TIME_HDR = "splunk.time";
+  static final String FIELDS_HDR_PREFIX = "splunk.field.";
 
   // Required Parameters
   static final String URI_CONF = "splunk.hec.uri";
